@@ -1,14 +1,17 @@
-import pygame
-import random
+import pygame as pg
+import random as rd
 import math
-
-# Initialize Pygame
-pygame.init()
-
-# Set up the game window
-WIDTH, HEIGHT = 800, 600
-window = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Spaceship Battle with Asteroids")
+import os
+import time
+file_path = os.path.join(os.path.dirname(__file__))
+#initializing pygame
+pg.init()
+laser_sound = pg.mixer.Sound(f"{file_path}/laser-45816.mp3")
+intro_sound = pg.mixer.Sound(f"{file_path}/galaxy-283941.mp3")
+#game window
+WIDTH, HEIGHT =800, 600 
+window=pg.display.set_mode((WIDTH, HEIGHT))
+pg.display.set_caption("Ultimate Galaxy Battle")
 
 # Colors
 WHITE = (255, 255, 255)
@@ -17,53 +20,59 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 YELLOW = (255, 255, 0)
 
-# Load images for spaceship and enemy ship
-spaceship_image = pygame.image.load("C:\\Users\\ADMIN\\Desktop\\gamee\\413.png")
-enemy_ship_image = pygame.image.load("C:\\Users\\ADMIN\\Desktop\\gamee\\417336.png")
-enemy_ship_image = pygame.transform.scale(enemy_ship_image, (50, 50))
+#image definition
+spaceship_img=pg.image.load(f"{file_path}/spaceship.png")
+enemyship_img = pg.image.load(f"{file_path}/enemy.png")
+Asteroid_img = pg.image.load(f"{file_path}/astroid t.png").convert_alpha()
 
-# Spaceship class
+
+
+#spaceshipclass
 class Spaceship:
     def __init__(self):
-        self.image = pygame.transform.scale(spaceship_image, (50, 50))
-        self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT - 50))
-        self.health = 100
+        self.image =pg.transform.scale(spaceship_img, (50, 50))
+        self.rect =self.image.get_rect(center=(WIDTH // 2,HEIGHT -50))
+        self.health =100
         self.hit_timer = 0
-
-    def move(self, dx):
+        self.last_shot_time = 0  
+        self.shoot_cooldown = 300 
+    def move(self,dx) :
         self.rect.x += dx
-        self.rect.x = max(0, min(WIDTH - self.rect.width, self.rect.x))
-
-    def shoot(self):
-        return Laser(self.rect.centerx, self.rect.top, -1)
-
-    def draw_health_bar(self):
-        bar_width = 50
-        bar_height = 6
-        health_ratio = self.health / 100
-        bar_x = self.rect.centerx - bar_width // 2
-        bar_y = self.rect.bottom + 10  # Changed to draw below the spaceship
-        pygame.draw.rect(window, RED, (bar_x, bar_y, bar_width, bar_height))
-        pygame.draw.rect(window, GREEN, (bar_x, bar_y, bar_width * health_ratio, bar_height))
-
-# Asteroid class
+        self.rect.x = max(0,min(WIDTH-self.rect.width,self.rect.x))
+    def shoot(self) :
+        current_time = pg.time.get_ticks()
+        if current_time - self.last_shot_time >= self.shoot_cooldown:
+            self.last_shot_time = current_time
+            laser_sound.play() 
+            return Laser(self.rect.centerx, self.rect.top, -1)
+        return None
+    def draw_health_bar(self) :
+        bar_width =50
+        bar_height =6
+        health_ratio =self.health /100
+        bar_x =self.rect.centerx -bar_width // 2
+        bar_y =self.rect.bottom + 10
+        pg.draw.rect(window, RED, (bar_x, bar_y, bar_width, bar_height))
+        pg.draw.rect(window, GREEN, (bar_x, bar_y, bar_width * health_ratio, bar_height))
+    # astroid class
 class Asteroid:
     def __init__(self):
-        self.image = pygame.Surface((30, 30))
-        self.image.fill(RED)
-        self.rect = self.image.get_rect(center=(random.randint(0, WIDTH), 0))
+        self.image = pg.transform.scale(Asteroid_img, (70, 70))
+        self.rect = self.image.get_rect(center=(rd.randint(0, WIDTH), 0))
 
     def fall(self):
-        self.rect.y += 5
+        self.rect.y += 5    
+        
 
-# Laser class
-class Laser:
+#laser class
+class Laser:     
     def __init__(self, x, y, direction=-1, target_pos=None):
-        self.image = pygame.Surface((5, 10))
+        self.image = pg.Surface((5, 10))
         self.image.fill(WHITE)
         self.rect = self.image.get_rect(center=(x, y))
         self.direction = direction
         self.speed = 10
+
         if target_pos:
             dx = target_pos[0] - x
             dy = target_pos[1] - y
@@ -76,15 +85,14 @@ class Laser:
 
     def move(self):
         self.rect.x += self.vel_x
-        self.rect.y += self.vel_y
-
+        self.rect.y += self.vel_y   
 # Enemy Ship class
 class EnemyShip:
     def __init__(self):
-        self.image = pygame.transform.scale(enemy_ship_image, (50, 50))
-        self.rect = self.image.get_rect(center=(random.randint(0, WIDTH), 50))
+        self.image = pg.transform.scale(enemyship_img, (80, 80))
+        self.rect = self.image.get_rect(center=(rd.randint(0, WIDTH), 80))
         self.lasers = []
-        self.speed = random.choice([-3, 3])
+        self.speed = rd.choice([-3, 3])
         self.shoot_cooldown = 0
         self.health = 160
 
@@ -103,14 +111,13 @@ class EnemyShip:
     def draw_health_bar(self):
         bar_width = 50
         health_ratio = self.health / 160
-        pygame.draw.rect(window, RED, (self.rect.left, self.rect.top - 10, bar_width, 5))
-        pygame.draw.rect(window, YELLOW, (self.rect.left, self.rect.top - 10, bar_width * health_ratio, 5))
-
+        pg.draw.rect(window, RED, (self.rect.left, self.rect.top - 10, bar_width, 5))
+        pg.draw.rect(window, YELLOW, (self.rect.left, self.rect.top - 10, bar_width * health_ratio, 5))
 # Menu screen
 def first_menu():
-    font_title = pygame.font.Font(None, 64)
-    font_instr = pygame.font.Font(None, 36)
-    title = font_title.render("Spaceship Battle", True, RED)
+    font_title = pg.font.Font(None, 64)
+    font_instr = pg.font.Font(None, 36)
+    title = font_title.render("Ultimste Galaxy Battle", True, RED)
     prompt = font_instr.render("PRESS ENTER TO START NEW GAME", True, YELLOW)
     instructions = font_instr.render("PRESS ESC KEY TO EXIT", True, WHITE)
     while True:
@@ -118,22 +125,22 @@ def first_menu():
         window.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 2 - 100))
         window.blit(instructions, (WIDTH // 2 - instructions.get_width() // 2, HEIGHT // 2 - 20))
         window.blit(prompt, (WIDTH // 2 - prompt.get_width() // 2, HEIGHT // 2 + 40))
-        pygame.display.flip()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
+        pg.display.flip()
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
                 exit()
-            elif event.type == pygame.KEYDOWN : 
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
+            elif event.type == pg.KEYDOWN : 
+                if event.key == pg.K_ESCAPE:
+                    pg.quit()
                     exit()
-                elif event.key == pygame.K_RETURN:
+                elif event.key == pg.K_RETURN:
                     return
-            
-    
+
 def main_menu():
-    font_title = pygame.font.Font(None, 64)
-    font_instr = pygame.font.Font(None, 36)
+    intro_sound.play()
+    font_title = pg.font.Font(None, 64)
+    font_instr = pg.font.Font(None, 36)
     title = font_title.render("Spaceship Battle", True, RED)
     instructions = font_instr.render("Use arrow keys to move, SPACE to shoot", True, WHITE)
     prompt = font_instr.render("Press ENTER to start", True, YELLOW)
@@ -143,18 +150,18 @@ def main_menu():
         window.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 2 - 100))
         window.blit(instructions, (WIDTH // 2 - instructions.get_width() // 2, HEIGHT // 2 - 20))
         window.blit(prompt, (WIDTH // 2 - prompt.get_width() // 2, HEIGHT // 2 + 40))
-        
-        pygame.display.flip()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                return
 
+        
+        pg.display.flip()
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                exit()
+            if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
+                return                
 # Game loop
 def main():
-    clock = pygame.time.Clock()
+    clock = pg.time.Clock()
     spaceship = Spaceship()
     asteroids = []
     lasers = []
@@ -166,19 +173,25 @@ def main():
     asteroid_hits = 0
 
     while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
                 running = False
 
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]:
+        keys = pg.key.get_pressed()
+        if keys[pg.K_LEFT]:
             spaceship.move(-5)
-        if keys[pygame.K_RIGHT]:
+        if keys[pg.K_RIGHT]:
             spaceship.move(5)
-        if keys[pygame.K_SPACE]:
-            lasers.append(spaceship.shoot())
+        if keys[pg.K_UP]:
+            spaceship.move(5)
+        if keys[pg.K_DOWN]:
+            spaceship.move(5)
+        if keys[pg.K_SPACE]:
+            laser = spaceship.shoot()
+            if laser:
+                lasers.append(laser)
 
-        if random.randint(1, 20) == 1:
+        if rd.randint(1, 20) == 1:
             asteroids.append(Asteroid())
 
         if score >= (enemy_destroyed_count + 25) and enemy_spawn_time <= 0:
@@ -254,18 +267,18 @@ def main():
             for laser in enemy.lasers:
                 window.blit(laser.image, laser.rect)
 
-        font = pygame.font.Font(None, 36)
+        font = pg.font.Font(None, 36)
         score_text = font.render(f'Score: {score}', True, WHITE)
         window.blit(score_text, (10, 10))
 
         if spaceship.health <= 0:
             running = False
 
-        pygame.display.flip()
+        pg.display.flip()
         clock.tick(60)
         enemy_spawn_time -= 1
 
-    pygame.quit()
+    pg.quit()
 
 if __name__ == "__main__":
     first_menu()
